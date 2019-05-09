@@ -59,6 +59,7 @@ Semantics (WFS) support in SWI-Prolog.
 %   This predicate provides a tabled alternative to \+/1 (or not/1) that
 %   provides well founded semantics.
 
+% tnot/1 is defined in boot/tabling.pl
 
 %!  unknown
 %
