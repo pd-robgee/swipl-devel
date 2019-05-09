@@ -1077,21 +1077,21 @@ prolog_message(query(QueryResult)) -->
 query_result(no) -->            % failure
     [ ansi([bold,fg(red)], 'false.', []) ],
     extra_line.
-query_result(yes([])) -->      % prompt_alternatives_on: groundness
+query_result(yes(true, [])) -->      % prompt_alternatives_on: groundness
     !,
     [ ansi(bold, 'true.', []) ],
     extra_line.
-query_result(yes(Residuals)) -->
-    result([], Residuals),
+query_result(yes(Delays, Residuals)) -->
+    result([], Delays, Residuals),
     extra_line.
 query_result(done) -->          % user typed <CR>
     extra_line.
-query_result(yes(Bindings, Residuals)) -->
-    result(Bindings, Residuals),
-    prompt(yes, Bindings, Residuals).
-query_result(more(Bindings, Residuals)) -->
-    result(Bindings, Residuals),
-    prompt(more, Bindings, Residuals).
+query_result(yes(Bindings, Delays, Residuals)) -->
+    result(Bindings, Delays, Residuals),
+    prompt(yes, Bindings, Delays, Residuals).
+query_result(more(Bindings, Delays, Residuals)) -->
+    result(Bindings, Delays, Residuals),
+    prompt(more, Bindings, Delays, Residuals).
 query_result(help) -->
     [ nl, 'Actions:'-[], nl, nl,
       '; (n, r, space, TAB): redo    t:          trace & redo'-[], nl,
@@ -1109,10 +1109,10 @@ query_result(eof) -->
 query_result(toplevel_open_line) -->
     [].
 
-prompt(Answer, [], []-[]) -->
+prompt(Answer, [], true, []-[]) -->
     !,
     prompt(Answer, empty).
-prompt(Answer, _, _) -->
+prompt(Answer, _, _, _) -->
     !,
     prompt(Answer, non_empty).
 
@@ -1131,13 +1131,22 @@ prompt(more, _) -->
     !,
     [ ' '-[], flush ].
 
-result(Bindings, Residuals) -->
+result(Bindings, Delays, Residuals) -->
     { current_prolog_flag(answer_write_options, Options0),
       Options = [partial(true)|Options0]
     },
     bindings(Bindings, [priority(699)|Options]),
-    bind_res_sep(Bindings, Residuals),
-    residuals(Residuals, [priority(999)|Options]).
+    (   {Residuals == []-[]}
+    ->  bind_delays_sep(Bindings, Delays),
+        delays(Delays)
+    ;   bind_res_sep(Bindings, Residuals),
+        residuals(Residuals, [priority(999)|Options]),
+        (   {Delays == true}
+        ->  []
+        ;   [','-[], nl],
+            delays(Delays)
+        )
+    ).
 
 bindings([], _) -->
     [].
@@ -1197,10 +1206,19 @@ residuals1([G|Gs], Options) -->
     ;   [ '~W'-[G, Options] ]
     ).
 
+delays(true) -->
+    !.
+delays(_) -->
+    [ ansi([bold,fg(cyan)], unknown, []) ].
+
 bind_res_sep(_, []) --> !.
 bind_res_sep(_, []-[]) --> !.
 bind_res_sep([], _) --> !.
 bind_res_sep(_, _) --> [','-[], nl].
+
+bind_delays_sep([], _) --> !.
+bind_delays_sep(_, true) --> !.
+bind_delays_sep(_, _) --> [','-[], nl].
 
 extra_line -->
     { current_prolog_flag(toplevel_extra_white_line, true) },
