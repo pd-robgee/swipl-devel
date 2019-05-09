@@ -44,7 +44,9 @@
             abolish_table_subgoals/1,   % :Subgoal
 
             start_tabling/2,            % +Wrapper, :Worker
-            start_tabling/4             % +Wrapper, :Worker, :Variant, ?ModeArgs
+            start_tabling/4,            % +Wrapper, :Worker, :Variant, ?ModeArgs
+
+            '$wfs_call'/2               % :Goal, -Delays
           ]).
 
 :- meta_predicate
@@ -52,7 +54,8 @@
     start_tabling(+, 0),
     start_tabling(+, 0, +, ?),
     current_table(:, -),
-    abolish_table_subgoals(:).
+    abolish_table_subgoals(:),
+    '$wfs_call'(0, :).
 
 /** <module> Tabled execution (SLG WAM)
 
@@ -82,51 +85,17 @@ wl_goal(tnot(WorkList), ~(Goal), Skeleton) :-
     !,
     '$tbl_worklist_data'(WorkList, worklist(_SCC,Trie,_,_,_)),
     '$tbl_table_status'(Trie, _Status, Wrapper, Skeleton),
-    user_goal(Wrapper, Goal).
+    unqualify_goal(Wrapper, user, Goal).
 wl_goal(WorkList, Goal, Skeleton) :-
     '$tbl_worklist_data'(WorkList, worklist(_SCC,Trie,_,_,_)),
     '$tbl_table_status'(Trie, _Status, Wrapper, Skeleton),
-    user_goal(Wrapper, Goal).
+    unqualify_goal(Wrapper, user, Goal).
 
-at_goal(tnot(Trie), ~(Goal), Skeleton) :-
-    !,
-    '$tbl_table_status'(Trie, _Status, Wrapper, Skeleton),
-    user_goal(Wrapper, Goal).
-at_goal(Trie, Goal, Skeleton) :-
-    '$tbl_table_status'(Trie, _Status, Wrapper, Skeleton),
-    user_goal(Wrapper, Goal).
+delay_goals(List, Goal) :-
+    delay_goals(List, user, Goal).
 
-delay_goals([], true) :-
-    !.
-delay_goals([AT+AN|T], Goal) :-
-    !,
-    (   integer(AN)
-    ->  at_goal(AT, G0, Answer),
-        trie_term(AN, Answer)
-    ;   AN = G0
-    ),
-    user_goal(G0, G1),
-    GN = G1,
-    (   T == []
-    ->  Goal = GN
-    ;   Goal = (GN,GT),
-        delay_goals(T, GT)
-    ).
-delay_goals([AT|T], Goal) :-
-    at_goal(AT, G0, _Skeleton),
-    user_goal(G0, G1),
-    GN = ~(G1),
-    (   T == []
-    ->  Goal = GN
-    ;   Goal = (GN,GT),
-        delay_goals(T, GT)
-    ).
-
-user_goal(user:Goal, Goal) :-
-    !.
-user_goal(Goal, Goal).
-
-:- op(900, fy, user:'~').
+user_goal(Goal, UGoal) :-
+    unqualify_goal(Goal, user, UGoal).
 
 :- endif.
 
@@ -199,20 +168,6 @@ table_answer(Trie, Wrapper, Skeleton) :-
     ->  add_delay(Trie+Wrapper)
     ;   add_delay(Trie+AN)
     ).
-
-add_delay(Delay) :-
-    (   nb_current('$delay_list', DL0)
-    ->  b_setval('$delay_list', [Delay|DL0])
-    ;   b_setval('$delay_list', [Delay])
-    ).
-
-reset_delays :-
-    nb_current('$delay_list', Global),
-    Global \== [],
-    !,
-    b_setval('$delay_list', []).
-reset_delays.
-
 
 done_leader(complete, _SCC, Wrapper, Skeleton, Trie) :-
     !,
@@ -535,6 +490,77 @@ negation_suspend(Wrapper, Skeleton, Worklist) :-
     ;   tdebug(tnot, 'negation_suspend: resume ~p incomplete', [Wrapper]),
         fail
     ).
+
+		 /*******************************
+		 *           DELAY LISTS	*
+		 *******************************/
+
+add_delay(Delay) :-
+    (   nb_current('$delay_list', DL0)
+    ->  b_setval('$delay_list', [Delay|DL0])
+    ;   b_setval('$delay_list', [Delay])
+    ).
+
+reset_delays :-
+    nb_current('$delay_list', Global),
+    Global \== [],
+    !,
+    b_setval('$delay_list', []).
+reset_delays.
+
+%!  '$wfs_call'(:Goal, :Delays)
+%
+%   Call Goal and provide WFS delayed goals as a conjunction in Delays.
+
+'$wfs_call'(Goal, M:Delays) :-
+    reset_delays,
+    call(Goal),
+    delay_list(M, Delays).
+
+delay_list(M, Delays) :-
+    nb_current('$delay_list', DL),
+    !,
+    delay_goals(DL, M, Delays).
+delay_list(_, true).
+
+delay_goals([], _, true) :-
+    !.
+delay_goals([AT+AN|T], M, Goal) :-
+    !,
+    (   integer(AN)
+    ->  at_delay_goal(AT, G0, Answer),
+        trie_term(AN, Answer)
+    ;   AN = G0
+    ),
+    unqualify_goal(G0, M, G1),
+    GN = G1,
+    (   T == []
+    ->  Goal = GN
+    ;   Goal = (GN,GT),
+        delay_goals(T, M, GT)
+    ).
+delay_goals([AT|T], M, Goal) :-
+    at_delay_goal(AT, G0, _Skeleton),
+    unqualify_goal(G0, M, G1),
+    GN = ~(G1),
+    (   T == []
+    ->  Goal = GN
+    ;   Goal = (GN,GT),
+        delay_goals(T, M, GT)
+    ).
+
+at_delay_goal(tnot(Trie), tnot(Goal), Skeleton) :-
+    !,
+    '$tbl_table_status'(Trie, _Status, Wrapper, Skeleton),
+    unqualify_goal(Wrapper, user, Goal).
+at_delay_goal(Trie, Goal, Skeleton) :-
+    '$tbl_table_status'(Trie, _Status, Wrapper, Skeleton),
+   unqualify_goal(Wrapper, user, Goal).
+
+unqualify_goal(M:Goal, M, Goal0) :-
+    !,
+    Goal0 = Goal.
+unqualify_goal(Goal, _, Goal).
 
 
                  /*******************************
