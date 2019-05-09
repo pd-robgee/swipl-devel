@@ -1133,18 +1133,19 @@ prompt(more, _) -->
 
 result(Bindings, Delays, Residuals) -->
     { current_prolog_flag(answer_write_options, Options0),
-      Options = [partial(true)|Options0]
+      Options = [partial(true)|Options0],
+      GOptions = [priority(999)|Options]
     },
     bindings(Bindings, [priority(699)|Options]),
     (   {Residuals == []-[]}
     ->  bind_delays_sep(Bindings, Delays),
-        delays(Delays)
+        delays(Delays, GOptions)
     ;   bind_res_sep(Bindings, Residuals),
-        residuals(Residuals, [priority(999)|Options]),
+        residuals(Residuals, GOptions),
         (   {Delays == true}
         ->  []
         ;   [','-[], nl],
-            delays(Delays)
+            delays(Delays, GOptions)
         )
     ).
 
@@ -1206,10 +1207,23 @@ residuals1([G|Gs], Options) -->
     ;   [ '~W'-[G, Options] ]
     ).
 
-delays(true) -->
+delays(true, _Options) -->
     !.
-delays(_) -->
+delays(Goal, Options) -->
+    { current_prolog_flag(answer_wfs_residuals, true)},
+    !,
+    [ ansi(fg(green), '% with WFS residual goals', []), nl ],
+    wfs_residuals(Goal, Options).
+delays(_, _Options) -->
     [ ansi([bold,fg(cyan)], unknown, []) ].
+
+wfs_residuals((A,B), Options) -->
+    !,
+    [ '~W,'-[A, Options], nl ],
+    wfs_residuals(B, Options).
+wfs_residuals(G, Options) -->
+    [ '~W'-[G, Options] ].
+
 
 bind_res_sep(_, []) --> !.
 bind_res_sep(_, []-[]) --> !.

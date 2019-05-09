@@ -96,6 +96,10 @@ unqualify((A0,B0), M, G) :-
     G = (A,B),
     unqualify(A0, M, A),
     unqualify(B0, M, B).
+unqualify(tnot(A0), M, G) :-
+    !,
+    G = tnot(A),
+    unqualify(A0, M, A).
 unqualify(M:G0, M, G) :-
     !,
     G = G0.

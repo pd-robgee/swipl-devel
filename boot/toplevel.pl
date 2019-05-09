@@ -1118,7 +1118,8 @@ no_lco.
 write_bindings(Bindings, ResidueVars, Delays, Det) :-
     '$current_typein_module'(TypeIn),
     translate_bindings(Bindings, Bindings1, ResidueVars, TypeIn:Residuals),
-    write_bindings2(Bindings1, Residuals, Delays, Det).
+    omit_qualifier(Delays, TypeIn, Delays1),
+    write_bindings2(Bindings1, Residuals, Delays1, Det).
 
 write_bindings2([], Residuals, Delays, _) :-
     current_prolog_flag(prompt_alternatives_on, groundness),
@@ -1362,6 +1363,9 @@ omit_meta_qualifiers((QA,QB), TypeIn, (A,B)) :-
     !,
     omit_qualifier(QA, TypeIn, A),
     omit_qualifier(QB, TypeIn, B).
+omit_meta_qualifiers(tnot(QA), TypeIn, tnot(A)) :-
+    !,
+    omit_qualifier(QA, TypeIn, A).
 omit_meta_qualifiers(freeze(V, QGoal), TypeIn, freeze(V, Goal)) :-
     callable(QGoal),
     !,
