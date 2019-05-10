@@ -695,12 +695,12 @@ update_delay_list(worklist *wl, trie_node *answer,
 	  trie *at;
 	  trie_node *an;
 
+	  deRef(dlp);
 	  if ( !isList(*dlp) )
 	  { PL_type_error("list", delays);
 	    return UDL_FALSE;
 	  }
 
-	  deRef(dlp);
 	  h = HeadList(dlp);
 	  deRef(h);
 	  if ( isAtom(*h) )		/* Answer trie symbol */
@@ -811,6 +811,104 @@ get_delay_set(delay_info *di, delay_set *set, delay **base, delay **top)
   *top  = (*base) + set->size;
 }
 
+
+term_t
+init_delay_list(void)
+{ GET_LD
+  term_t t = PL_new_term_ref();
+  Word p = allocGlobal(2);
+
+  p[0] = FUNCTOR_minus1;
+  p[1] = ATOM_nil;
+
+  *valTermRef(t) = consPtr(p, TAG_COMPOUND|STG_GLOBAL);
+
+  return t;
+}
+
+static
+PRED_IMPL("$tbl_delay_list", 1, tbl_delay_list, 0)
+{ PRED_LD;
+  term_t dl = LD->tabling.delay_list;
+  term_t a = PL_new_term_ref();
+
+  return ( _PL_get_arg(1, dl, a) &&
+	   PL_unify(A1, a) );
+}
+
+static
+PRED_IMPL("$tbl_set_delay_list", 1, tbl_set_delay_list, 0)
+{ PRED_LD;
+  term_t dl = LD->tabling.delay_list;
+  Word p;
+
+  if ( !hasGlobalSpace(0) )
+  { int rc;
+
+    if ( (rc=ensureGlobalSpace(0, ALLOW_GC)) != TRUE )
+      return raiseStackOverflow(rc);
+  }
+
+  p = valTermRef(dl);
+  if ( isTerm(*p) )
+  { p = argTermP(*p, 0);
+
+    TrailAssignment(p);
+    unify_vp(p, valTermRef(A1) PASS_LD);
+  }
+
+  return TRUE;
+}
+
+
+/** '$tbl_add_global_delays'(+Delays0, -Delays) is det.
+ *
+ *  Delays is the result of appending the  global delay list to Delays0.
+ *  This is a highly time  critical   operation  and might eventually be
+ *  merged into '$tbl_wkl_add_answer'/4 and '$tbl_wkl_add_suspension'/2.
+ */
+
+static
+PRED_IMPL("$tbl_add_global_delays", 2, tbl_add_global_delays, 0)
+{ PRED_LD
+  term_t dl = PL_new_term_ref();
+
+  _PL_get_arg(1, LD->tabling.delay_list, dl);
+
+  if ( PL_get_nil(dl) )
+  { return PL_unify(A1, A2);
+  } else if ( PL_get_nil(A1) )
+  { return PL_unify(A2, dl);
+  } else
+  { intptr_t len;
+    Word tailp;
+    Word dlp, p;
+    word l;
+
+    len = skip_list(valTermRef(dl), &tailp PASS_LD);
+    assert(isNil(*tailp));
+
+    if ( !(p=allocGlobal(3*len)) )
+      return FALSE;
+    l = consPtr(p, TAG_COMPOUND|STG_GLOBAL);
+
+    dlp = valTermRef(dl);
+    deRef(dlp);
+
+    for(;;)
+    { *p++ = FUNCTOR_dot2;
+      *p++ = linkVal(HeadList(dlp));
+      dlp = TailList(dlp);
+      deRef(dlp);
+      if ( isNil(*dlp) )
+      { *p = linkVal(valTermRef(A1));
+	return _PL_unify_atomic(A2, l);
+      }
+      *p   = consPtr(&p[1], TAG_COMPOUND|STG_GLOBAL);
+      p++;
+    }
+  }
+}
 
 		 /*******************************
 		 *	  SIMPLIFICATION	*
@@ -2981,6 +3079,9 @@ BeginPredDefs(tabling)
   PRED_DEF("$tbl_abolish_all_tables",   0, tbl_abolish_all_tables,   0)
   PRED_DEF("$tbl_destroy_table",        1, tbl_destroy_table,        0)
   PRED_DEF("$tbl_trienode",             1, tbl_trienode,             0)
+  PRED_DEF("$tbl_delay_list",           1, tbl_delay_list,           0)
+  PRED_DEF("$tbl_set_delay_list",       1, tbl_set_delay_list,       0)
+  PRED_DEF("$tbl_add_global_delays",    2, tbl_add_global_delays,    0)
 
   PRED_DEF("$tbl_scc",                  1, tbl_scc,                  0)
   PRED_DEF("$tbl_scc_data",             2, tbl_scc_data,             0)

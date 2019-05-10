@@ -164,6 +164,7 @@ typedef struct delay_info
 		 *	     PROTOTYPES		*
 		 *******************************/
 
-COMMON(void) clearThreadTablingData(PL_local_data_t *ld);
+COMMON(void)	clearThreadTablingData(PL_local_data_t *ld);
+COMMON(term_t)	init_delay_list(void);
 
 #endif /*_PL_TABLING_H*/

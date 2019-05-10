@@ -244,7 +244,7 @@ delim(Wrapper, Worker, WorkList, Delays) :-
 
 add_answer_or_suspend(0, Wrapper, WorkList, _, Delays, Complete) :-
     !,
-    add_global_delays(Delays, AllDelays),
+    '$tbl_add_global_delays'(Delays, AllDelays),
     tdebug(wl_goal(WorkList, Goal, _)),
     tdebug(delay_goals(AllDelays, Cond)),
     tdebug(answer, 'New answer ~p for ~p (delay = ~p)',
@@ -256,17 +256,10 @@ add_answer_or_suspend(Continuation, Skeleton, WorkList,
     tdebug(wl_goal(WorkList, Wrapper, _)),
     tdebug(wl_goal(SourceWL, SrcWrapper, _)),
     tdebug(schedule, 'Suspended ~p, for solving ~p', [SrcWrapper, Wrapper]),
-    add_global_delays(Delays, AllDelays),
+    '$tbl_add_global_delays'(Delays, AllDelays),
     '$tbl_wkl_add_suspension'(
         SourceWL,
         dependency(SrcSkeleton, Continuation, Skeleton, WorkList, AllDelays)).
-
-add_global_delays(Delays0, Delays) :-
-    nb_current('$delay_list', Global),
-    !,
-    '$append'(Global, Delays0, Delays).
-add_global_delays(Delays, Delays).
-
 
 %!  start_tabling(:Wrapper, :Implementation, +Variant, +ModeArgs)
 %
@@ -496,17 +489,11 @@ negation_suspend(Wrapper, Skeleton, Worklist) :-
 		 *******************************/
 
 add_delay(Delay) :-
-    (   nb_current('$delay_list', DL0)
-    ->  b_setval('$delay_list', [Delay|DL0])
-    ;   b_setval('$delay_list', [Delay])
-    ).
+    '$tbl_delay_list'(DL0),
+    '$tbl_set_delay_list'([Delay|DL0]).
 
 reset_delays :-
-    nb_current('$delay_list', Global),
-    Global \== [],
-    !,
-    b_setval('$delay_list', []).
-reset_delays.
+    '$tbl_set_delay_list'([]).
 
 %!  '$wfs_call'(:Goal, :Delays)
 %
@@ -518,10 +505,8 @@ reset_delays.
     delay_list(M, Delays).
 
 delay_list(M, Delays) :-
-    nb_current('$delay_list', DL),
-    !,
+    '$tbl_delay_list'(DL),
     delay_goals(DL, M, Delays).
-delay_list(_, true).
 
 delay_goals([], _, true) :-
     !.
