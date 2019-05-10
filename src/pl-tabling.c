@@ -650,7 +650,6 @@ update_delay_list(worklist *wl, trie_node *answer,
 { if ( delays )
   { Word dlp = valTermRef(delays);
 
-    deRef(dlp);
     if ( isNil(*dlp) )
     { delay_info *di;
 
@@ -663,8 +662,30 @@ update_delay_list(worklist *wl, trie_node *answer,
 	return UDL_COMPLETE;
       return UDL_TRUE;
     } else
-    { delay_info *di = answer_delay_info(wl, answer, TRUE);
-      delay_set  *ds = create_delay_set(di);
+    { delay_info *di;
+      delay_set  *ds;
+      intptr_t len;
+      Word tail;
+
+      len = skip_list(dlp, &tail PASS_LD);
+      if ( !isNil(*tail) )
+      { PL_type_error("list", delays);
+	return UDL_FALSE;
+      }
+      if ( !hasGlobalSpace(3+len*3) )
+      { int rc;
+
+	if ( (rc=ensureGlobalSpace(3+len*3, ALLOW_GC)) == TRUE )
+	{ dlp = valTermRef(delays);
+	  deRef(dlp);
+	} else
+	{ raiseStackOverflow(rc);
+	  return UDL_FALSE;
+	}
+      }
+
+      di = answer_delay_info(wl, answer, TRUE);
+      ds = create_delay_set(di);
 
       if ( ds )
       { word conj = 0;
@@ -709,8 +730,7 @@ update_delay_list(worklist *wl, trie_node *answer,
 		} else
 		{ Word c = allocGlobalNoShift(3);
 
-		  assert(c);		/* TBD: destroy ds; resize and retry */
-
+		  assert(c);
 		  c[0] = FUNCTOR_comma2;
 		  c[1] = *p;
 		  c[2] = conj;
@@ -738,8 +758,7 @@ update_delay_list(worklist *wl, trie_node *answer,
 	  Word vt = allocGlobalNoShift(3);
 	  word rt;
 
-	  assert(vt);		/* TBD: destroy ds; resize and retry */
-
+	  assert(vt);
 	  vt[0] = FUNCTOR_plus2;
 	  vt[1] = linkVal(valTermRef(skel));
 	  vt[2] = conj;
