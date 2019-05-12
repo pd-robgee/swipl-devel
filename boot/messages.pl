@@ -1134,8 +1134,9 @@ prompt(more, _) -->
 result(Bindings, Delays, Residuals) -->
     { current_prolog_flag(answer_write_options, Options0),
       Options = [partial(true)|Options0],
-      GOptions = [priority(999)|Options]
+      GOptions = [priority(999)|Options0]
     },
+    wfs_residual_program(Delays, GOptions),
     bindings(Bindings, [priority(699)|Options]),
     (   {Residuals == []-[]}
     ->  bind_delays_sep(Bindings, Delays),
@@ -1207,19 +1208,30 @@ residuals1([G|Gs], Options) -->
     ;   [ '~W'-[G, Options] ]
     ).
 
-delays(true, _Options) -->
+wfs_residual_program(true, _Options) -->
     !.
-delays(Goal, Options) -->
+wfs_residual_program(Goal, _Options) -->
     { current_prolog_flag(toplevel_list_wfs_residual_program, true),
       !,
       '$current_typein_module'(TypeIn),
-      '$delete'(Options, partial(true), Options1),
+      (   current_predicate(delays_residual_program/2)
+      ->  true
+      ;   use_module(library(wfs), [delays_residual_program/2])
+      ),
       delays_residual_program(TypeIn:Goal, TypeIn:Program)
     },
     !,
     [ ansi(fg(green), '% WFS residual program', []), nl ],
-    [ ansi(fg(cyan), '~@', ['$messages':list_clauses(Program)]) ],
-    [ ansi([bold], '~W', [Goal, Options1]) ].
+    [ ansi(fg(cyan), '~@', ['$messages':list_clauses(Program)]) ].
+wfs_residual_program(_, _) --> [].
+
+delays(true, _Options) -->
+    !.
+delays(Goal, Options) -->
+    { current_prolog_flag(toplevel_list_wfs_residual_program, true)
+    },
+    !,
+    [ ansi([bold], '~W', [Goal, Options]) ].
 delays(_, _Options) -->
     [ ansi([bold,fg(cyan)], unknown, []) ].
 
