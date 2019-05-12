@@ -117,14 +117,23 @@ residual_program((A,B), Done0, Done) -->
 residual_program(tnot(A), Done0, Done) -->
     !,
     residual_program(A, Done0, Done).
-residual_program(G, Done0, Done) -->
-    { '$tbl_variant_table'(VariantTrie),
-      trie_gen(VariantTrie, Goal, Trie),
+residual_program(Goal0, Done0, Done) -->
+    { (   predicate_property(Goal0, imported_from(M2))
+      ->  Goal0 = _:G,
+          Goal = M2:G
+      ;   Goal = Goal0
+      ),
+      (   current_table(Goal, Trie)
+      ->  true
+      ;   '$tabling':more_general_table(Goal, Trie)
+      ->  true
+      ;   writeln(user_error, 'OOPS: Missing Call? '(Goal))
+      ),
       '$tbl_table_status'(Trie, _Status, Goal, Skeleton),
       '$tbl_answer'(Trie, Skeleton, Condition)
     },
-    [ (G :- Condition) ],
-    residual_program(Condition, [G|Done0], Done).
+    [ (Goal :- Condition) ],
+    residual_program(Condition, [Goal|Done0], Done).
 
 unqualify_clause(M, (Head0 :- Body0), (Head :- Body)) :-
     unqualify(Head0, M, Head),

@@ -1210,15 +1210,16 @@ residuals1([G|Gs], Options) -->
 delays(true, _Options) -->
     !.
 delays(Goal, Options) -->
-    { current_prolog_flag(answer_wfs_residuals, true),
+    { current_prolog_flag(toplevel_list_wfs_residual_program, true),
       !,
       '$current_typein_module'(TypeIn),
+      '$delete'(Options, partial(true), Options1),
       delays_residual_program(TypeIn:Goal, TypeIn:Program)
     },
     !,
-    [ ansi([bold,fg(cyan)], '~W.', [Goal, Options]) ],
-    [ ansi(fg(green), '    % with WFS residual program', []), nl, nl ],
-    [ ansi(fg(cyan), '~@', ['$messages':list_clauses(Program)]) ].
+    [ ansi(fg(green), '% WFS residual program', []), nl ],
+    [ ansi(fg(cyan), '~@', ['$messages':list_clauses(Program)]) ],
+    [ ansi([bold], '~W', [Goal, Options1]) ].
 delays(_, _Options) -->
     [ ansi([bold,fg(cyan)], unknown, []) ].
 
