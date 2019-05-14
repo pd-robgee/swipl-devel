@@ -500,9 +500,11 @@ reset_delays :-
 %   Call Goal and provide WFS delayed goals as a conjunction in Delays.
 
 '$wfs_call'(Goal, M:Delays) :-
+    '$tbl_delay_list'(DL0),
     reset_delays,
     call(Goal),
-    delay_list(M, Delays).
+    delay_list(M, Delays),
+    '$tbl_set_delay_list'(DL0).
 
 delay_list(M, Delays) :-
     '$tbl_delay_list'(DL),

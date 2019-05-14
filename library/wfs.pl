@@ -73,7 +73,9 @@ unknown :-
 %
 %   True when Goal is true with Delays.   Delays is `true` if the answer
 %   is unconditionally true and a conjuctions   of tabled goals that are
-%   _unknown_ according to the Well Founded Semantics otherwise.
+%   _unknown_ according to the  Well   Founded  Semantics otherwise. The
+%   global delay list is  cleared  before   running  Goal  and  restored
+%   regardless of whether Goal succeeds, fails or raises an error.
 
 call_delays(Goal, Delays) :-
     '$wfs_call'(Goal, Delays).
