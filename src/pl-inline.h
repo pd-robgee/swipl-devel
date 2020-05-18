@@ -41,6 +41,7 @@
 #ifdef __WINDOWS__
 #include <windows.h>
 #undef small
+#include <intrin.h>
 #endif
 
 		 /*******************************
@@ -67,10 +68,10 @@ MSB(size_t i)
 { unsigned long index;
 #if SIZEOF_VOIDP == 8
   unsigned __int64 mask = i;
-  _BitScanReverse64(&index, mask);
+  BitScanReverse64(&index, mask);
 #else
   unsigned long mask = i;
-  _BitScanReverse(&index, mask);
+  BitScanReverse(&index, mask);
 #endif
 
   return index;
@@ -80,7 +81,7 @@ MSB(size_t i)
 static inline int
 MSB64(int64_t i)
 { unsigned long index;
-  _BitScanReverse64(&index, i);
+  BitScanReverse64(&index, i);
   return index;
 }
 
