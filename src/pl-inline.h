@@ -68,10 +68,12 @@ MSB(size_t i)
 { unsigned long index;
 #if SIZEOF_VOIDP == 8
   unsigned __int64 mask = i;
-  BitScanReverse64(&index, mask);
+  #pragma intrinsic(_BitScanReverse64)
+  _BitScanReverse64(&index, mask);
 #else
   unsigned long mask = i;
-  BitScanReverse(&index, mask);
+  #pragma intrinsic(_BitScanReverse)
+  _BitScanReverse(&index, mask);
 #endif
 
   return index;
@@ -81,7 +83,8 @@ MSB(size_t i)
 static inline int
 MSB64(int64_t i)
 { unsigned long index;
-  BitScanReverse64(&index, i);
+  #pragma intrinsic(_BitScanReverse64)
+  _BitScanReverse64(&index, i);
   return index;
 }
 
