@@ -42,10 +42,8 @@
 #include <windows.h>
 #undef small
 #include <intrin.h>
-#if SIZEOF_VOIDP == 8
-  #pragma intrinsic(_BitScanReverse64)
-#endif
 #pragma intrinsic(_BitScanReverse)
+#pragma intrinsic(_BitScanReverse64)
 #endif
 
 		 /*******************************
@@ -81,7 +79,6 @@ MSB(size_t i)
   return index;
 }
 
-#if SIZEOF_VOIDP == 8
 #define HAVE_MSB64 1
 static inline int
 MSB64(int64_t i)
@@ -89,7 +86,6 @@ MSB64(int64_t i)
   _BitScanReverse64(&index, i);
   return index;
 }
-#endif
 
 #define MEMORY_BARRIER() MemoryBarrier()
 
